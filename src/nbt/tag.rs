@@ -1,5 +1,7 @@
 use crate::nbt::bytes::NbtBytes;
 
+use super::bytes::ByteResult;
+
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum TagID {
     End,
@@ -65,20 +67,20 @@ pub struct Tag {
 
 impl Tag {
     /// Consumes and returns every tag up to and including TAG_End.
-    fn get_compound(nbt_bytes: &mut NbtBytes) -> Vec<Tag> {
+    fn get_compound(nbt_bytes: &mut NbtBytes) -> ByteResult<Vec<Tag>> {
         let mut tags = vec![];
 
         loop {
-            let tag_id = nbt_bytes.next_id();
+            let tag_id = nbt_bytes.next_id()?;
             let name = if tag_id != TagID::End {
-                nbt_bytes.next_str()
+                nbt_bytes.next_str()?
             } else {
                 String::new()
             };
 
             tags.push(Tag {
                 name,
-                payload: Tag::get_payload(nbt_bytes, tag_id),
+                payload: Tag::get_payload(nbt_bytes, tag_id)?,
             });
 
             if tag_id == TagID::End {
@@ -86,61 +88,70 @@ impl Tag {
             }
         }
 
-        tags
+        Ok(tags)
     }
 
     /// Gets the payload from a tag type.
-    fn get_payload(nbt_bytes: &mut NbtBytes, tag_id: TagID) -> TagPayload {
-        match tag_id {
+    fn get_payload(nbt_bytes: &mut NbtBytes, tag_id: TagID) -> ByteResult<TagPayload> {
+        Ok(match tag_id {
             TagID::End => TagPayload::End,
-            TagID::Byte => TagPayload::Byte(nbt_bytes.next_i8()),
-            TagID::Short => TagPayload::Short(nbt_bytes.next_i16()),
-            TagID::Int => TagPayload::Int(nbt_bytes.next_i32()),
-            TagID::Long => TagPayload::Long(nbt_bytes.next_i64()),
-            TagID::Float => TagPayload::Float(nbt_bytes.next_f32()),
-            TagID::Double => TagPayload::Double(nbt_bytes.next_f64()),
-            TagID::ByteArray => TagPayload::ByteArray(
-                (0..nbt_bytes.next_i32())
-                    .map(|_| TagPayload::Byte(nbt_bytes.next_i8()))
-                    .collect(),
-            ),
-            TagID::String => TagPayload::String(nbt_bytes.next_str()),
-            TagID::List => {
-                let id = nbt_bytes.next_id();
+            TagID::Byte => TagPayload::Byte(nbt_bytes.next_i8()?),
+            TagID::Short => TagPayload::Short(nbt_bytes.next_i16()?),
+            TagID::Int => TagPayload::Int(nbt_bytes.next_i32()?),
+            TagID::Long => TagPayload::Long(nbt_bytes.next_i64()?),
+            TagID::Float => TagPayload::Float(nbt_bytes.next_f32()?),
+            TagID::Double => TagPayload::Double(nbt_bytes.next_f64()?),
+            TagID::ByteArray => {
                 let mut payloads = vec![];
-                for _ in 0..nbt_bytes.next_i32() {
-                    payloads.push(Tag::get_payload(nbt_bytes, id));
+                for _ in 0..nbt_bytes.next_i32()? {
+                    payloads.push(TagPayload::Byte(nbt_bytes.next_i8()?));
+                }
+
+                TagPayload::ByteArray(payloads)
+            }
+            TagID::String => TagPayload::String(nbt_bytes.next_str()?),
+            TagID::List => {
+                let id = nbt_bytes.next_id()?;
+                let mut payloads = vec![];
+                for _ in 0..nbt_bytes.next_i32()? {
+                    payloads.push(Tag::get_payload(nbt_bytes, id)?);
                 }
                 TagPayload::List(id, payloads)
             }
-            TagID::Compound => TagPayload::Compound(Tag::get_compound(nbt_bytes)),
-            TagID::IntArray => TagPayload::IntArray(
-                (0..nbt_bytes.next_i32())
-                    .map(|_| TagPayload::Int(nbt_bytes.next_i32()))
-                    .collect(),
-            ),
-            TagID::LongArray => TagPayload::LongArray(
-                (0..nbt_bytes.next_i32())
-                    .map(|_| TagPayload::Long(nbt_bytes.next_i64()))
-                    .collect(),
-            ),
-        }
+            TagID::Compound => TagPayload::Compound(Tag::get_compound(nbt_bytes)?),
+            TagID::IntArray => {
+                let mut payloads = vec![];
+                for _ in 0..nbt_bytes.next_i32()? {
+                    payloads.push(TagPayload::Int(nbt_bytes.next_i32()?));
+                }
+
+                TagPayload::IntArray(payloads)
+            }
+            TagID::LongArray => {
+                let mut payloads = vec![];
+                for _ in 0..nbt_bytes.next_i32()? {
+                    payloads.push(TagPayload::Long(nbt_bytes.next_i64()?));
+                }
+
+                TagPayload::LongArray(payloads)
+            }
+        })
     }
 
-    pub fn new<'a>(bytes: &Vec<u8>) -> Tag {
+    pub fn new<'a>(bytes: &Vec<u8>) -> ByteResult<Tag> {
         let mut nbt_bytes = NbtBytes {
             bytes: &mut bytes.iter(),
         };
-        let tag_id = nbt_bytes.next_id();
+        let tag_id = nbt_bytes.next_id()?;
         let name = if tag_id != TagID::End {
-            nbt_bytes.next_str()
+            nbt_bytes.next_str()?
         } else {
             String::new()
         };
 
-        Tag {
+        Ok(Tag {
             name,
-            payload: Tag::get_payload(&mut nbt_bytes, tag_id),
-        }
+            payload: Tag::get_payload(&mut nbt_bytes, tag_id)?,
+        })
     }
 }
