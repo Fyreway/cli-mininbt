@@ -1,4 +1,7 @@
-use std::io::{self, Stdout};
+use std::{
+    fmt::{self, Write},
+    io::{self, Stdout},
+};
 
 use crossterm::{
     execute,
@@ -25,6 +28,16 @@ enum TagTraversal {
     Compound(String),
     Array(i32),
     None,
+}
+
+impl fmt::Display for TagTraversal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Compound(name) => f.write_fmt(format_args!("{name}")),
+            Self::Array(idx) => f.write_fmt(format_args!("[{idx}]")),
+            Self::None => f.write_char('_'),
+        }
+    }
 }
 
 /// Traverses a path indicated by a vector of TagTraversal.
@@ -58,6 +71,7 @@ fn traverse<'a>(path: &'a Vec<TagTraversal>, root: &'a Tag) -> Result<&'a Tag, &
 pub struct UI<'a> {
     stdout: Stdout,
     tag: &'a Tag,
+    breadcrumbs_win: Window,
     tag_win: Window,
     bottom_win: Window,
     selected_tag: Vec<TagTraversal>,
@@ -65,7 +79,7 @@ pub struct UI<'a> {
 }
 
 impl UI<'_> {
-    pub fn new<'a>(tag: &'a Tag) -> crossterm::Result<UI<'a>> {
+    pub fn new(tag: &Tag) -> crossterm::Result<UI> {
         let size = terminal::size().unwrap();
         let mut stdout = io::stdout();
         enable_raw_mode()?;
@@ -73,7 +87,8 @@ impl UI<'_> {
         Ok(UI {
             stdout,
             tag,
-            tag_win: Window::new(0, 0, 0, size.1 - 1).unwrap_or_err(),
+            breadcrumbs_win: Window::new(0, 0, 0, 1).unwrap_or_err(),
+            tag_win: Window::new(0, 1, 0, size.1 - 2).unwrap_or_err(),
             bottom_win: Window::new(0, size.1 - 1, 0, 1).unwrap_or_err(),
             selected_tag: vec![],
             focused_tag: TagTraversal::None,
@@ -90,6 +105,7 @@ impl UI<'_> {
         'main: loop {
             self.render()?;
 
+            #[allow(clippy::single_match)]
             match self.get_events()? {
                 Status::Quit => break 'main,
                 _ => (),

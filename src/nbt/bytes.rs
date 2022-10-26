@@ -7,6 +7,7 @@ pub struct NbtBytes<'a> {
     pub bytes: &'a mut Iter<'a, u8>,
 }
 
+#[allow(clippy::enum_variant_names)]
 pub enum ByteError {
     NextByteError(usize),
     Utf8Error(FromUtf8Error),
@@ -84,8 +85,7 @@ impl NbtBytes<'_> {
         if name_len == 0 {
             Ok(String::new())
         } else {
-            String::from_utf8(self.next_bytes(name_len.into())?)
-                .map_err(|e| ByteError::Utf8Error(e))
+            String::from_utf8(self.next_bytes(name_len.into())?).map_err(ByteError::Utf8Error)
         }
     }
 
@@ -93,8 +93,8 @@ impl NbtBytes<'_> {
     /// possible u8 values than TagID values, this returns the TagID on success
     /// and a ByteError::InvalidTagID on failure.
     pub fn next_id(&mut self) -> ByteResult<TagID> {
-        Ok((*self.bytes.next().ok_or(ByteError::NextByteError(1))?)
+        (*self.bytes.next().ok_or(ByteError::NextByteError(1))?)
             .try_into()
-            .map_err(|e| ByteError::InvalidTagID(e))?)
+            .map_err(ByteError::InvalidTagID)
     }
 }

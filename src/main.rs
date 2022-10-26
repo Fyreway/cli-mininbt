@@ -21,7 +21,7 @@ fn main() {
     let mut contents = vec![];
     gz.read_to_end(&mut contents).unwrap_or_err();
 
-    let nbt = Tag::new(&mut contents).unwrap_or_err();
+    let nbt = Tag::new(&contents).unwrap_or_err();
     let mut ui = UI::new(&nbt).unwrap_or_err();
     ui.mainloop().unwrap_or_err();
 }

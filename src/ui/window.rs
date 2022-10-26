@@ -29,6 +29,11 @@ impl Window {
         }
     }
 
+    pub fn mv(&mut self, stdout: &mut Stdout, y: u16, x: u16) -> crossterm::Result<&mut Self> {
+        queue!(stdout, MoveTo(y + self.y, x + self.x))?;
+        Ok(self)
+    }
+
     pub fn mvwrite<T: Display>(
         &mut self,
         stdout: &mut Stdout,

@@ -6,7 +6,7 @@ use crate::nbt::bytes::NbtBytes;
 
 use super::bytes::ByteResult;
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TagID {
     End,
     Byte,
@@ -236,7 +236,7 @@ impl Tag {
         })
     }
 
-    pub fn new(bytes: &Vec<u8>) -> ByteResult<Self> {
+    pub fn new(bytes: &[u8]) -> ByteResult<Self> {
         let mut nbt_bytes = NbtBytes {
             bytes: &mut bytes.iter(),
         };

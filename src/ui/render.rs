@@ -17,7 +17,7 @@ impl UI<'_> {
     fn render_array_type(
         &mut self,
         tag_id: &TagID,
-        payloads: &Vec<TagPayload>,
+        payloads: &[TagPayload],
     ) -> crossterm::Result<()> {
         for (i, item) in payloads.iter().enumerate() {
             self.tag_win
@@ -29,12 +29,10 @@ impl UI<'_> {
                 )?
                 .write(&mut self.stdout, {
                     let formatted = format!("{i}").red();
-                    if {
-                        if let TagTraversal::Array(idx) = self.focused_tag.clone() {
-                            idx == i.try_into().unwrap()
-                        } else {
-                            false
-                        }
+                    if if let TagTraversal::Array(idx) = self.focused_tag.clone() {
+                        idx == i.try_into().unwrap()
+                    } else {
+                        false
                     } {
                         formatted.on_dark_blue()
                     } else {
@@ -80,15 +78,17 @@ impl UI<'_> {
         Ok(())
     }
 
-    fn render_compound_tag(&mut self, tag: &Tag) -> crossterm::Result<()> {
+    fn render_compound(&mut self, tag: &Tag) -> crossterm::Result<()> {
         self.tag_win.mvwrite(
             &mut self.stdout,
             0,
             0,
             format!("\"{}\"", tag.name).as_str().green(),
         )?;
-        let subtags = &tag.payload.as_compound().unwrap();
-        for (i, subtag) in subtags
+        for (i, subtag) in tag
+            .payload
+            .as_compound()
+            .unwrap()
             .iter()
             .filter(|t| t.tag_id != TagID::End)
             .enumerate()
@@ -102,12 +102,10 @@ impl UI<'_> {
                 )?
                 .write(&mut self.stdout, {
                     let formatted = format!("\"{}\"", subtag.name).red();
-                    if {
-                        if let TagTraversal::Compound(name) = self.focused_tag.clone() {
-                            name == subtag.name
-                        } else {
-                            false
-                        }
+                    if if let Some(name) = self.focused_tag.as_compound() {
+                        name == &subtag.name
+                    } else {
+                        false
                     } {
                         formatted.on_dark_blue()
                     } else {
@@ -139,11 +137,17 @@ impl UI<'_> {
         let selected_tag = self.selected_tag.clone();
         let tag = traverse(&selected_tag, self.tag).unwrap_or_err();
         match tag.tag_id {
-            TagID::Compound => self.render_compound_tag(tag)?,
+            TagID::Compound => self.render_compound(tag)?,
             TagID::ByteArray | TagID::List | TagID::IntArray | TagID::LongArray => {
                 self.render_array(tag)?
             }
             _ => (),
+        }
+        self.breadcrumbs_win.mv(&mut self.stdout, 0, 0)?;
+        for tr in &self.selected_tag {
+            self.breadcrumbs_win
+                .write(&mut self.stdout, format!("{tr}").grey())?
+                .write(&mut self.stdout, " > ".dark_grey())?;
         }
         self.bottom_win
             .mvwrite(&mut self.stdout, 0, 0, "[q]uit".stylize())?;
