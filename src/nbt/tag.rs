@@ -1,3 +1,7 @@
+use std::fmt::{self, Write};
+
+use enum_as_inner::EnumAsInner;
+
 use crate::nbt::bytes::NbtBytes;
 
 use super::bytes::ByteResult;
@@ -22,6 +26,7 @@ pub enum TagID {
 impl TryFrom<u8> for TagID {
     type Error = u8;
 
+    /// Gets the enum variant from a u8
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
             x if x == Self::End as u8 => Ok(Self::End),
@@ -42,7 +47,27 @@ impl TryFrom<u8> for TagID {
     }
 }
 
-#[derive(Debug)]
+impl From<&TagPayload> for TagID {
+    fn from(payload: &TagPayload) -> Self {
+        match payload {
+            TagPayload::End => Self::End,
+            TagPayload::Byte(_) => Self::Byte,
+            TagPayload::Short(_) => Self::Short,
+            TagPayload::Int(_) => Self::Int,
+            TagPayload::Long(_) => Self::Long,
+            TagPayload::Float(_) => Self::Float,
+            TagPayload::Double(_) => Self::Double,
+            TagPayload::ByteArray(_) => Self::ByteArray,
+            TagPayload::String(_) => Self::String,
+            TagPayload::List(_, _) => Self::List,
+            TagPayload::Compound(_) => Self::Compound,
+            TagPayload::IntArray(_) => Self::IntArray,
+            TagPayload::LongArray(_) => Self::LongArray,
+        }
+    }
+}
+
+#[derive(Debug, EnumAsInner)]
 pub enum TagPayload {
     End,
     Byte(i8),
@@ -51,23 +76,95 @@ pub enum TagPayload {
     Long(i64),
     Float(f32),
     Double(f64),
-    ByteArray(Vec<TagPayload>),
+    ByteArray(Vec<Self>),
     String(String),
-    List(TagID, Vec<TagPayload>),
+    List(TagID, Vec<Self>),
     Compound(Vec<Tag>),
-    IntArray(Vec<TagPayload>),
-    LongArray(Vec<TagPayload>),
+    IntArray(Vec<Self>),
+    LongArray(Vec<Self>),
+}
+
+impl fmt::Display for TagPayload {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Byte(byte) => f.write_fmt(format_args!("{byte}b")),
+            Self::Short(short) => f.write_fmt(format_args!("{short}s")),
+            Self::Int(int) => f.write_str(&int.to_string()),
+            Self::Long(long) => f.write_fmt(format_args!("{long}L")),
+            Self::Float(float) => f.write_fmt(format_args!("{float}f")),
+            Self::Double(double) => f.write_fmt(format_args!("{double}d")),
+            Self::ByteArray(bytes) => {
+                // Abbreviate if length is greater than 3, otherwise list
+                if bytes.len() <= 3 {
+                    f.write_str("[B;")?;
+                    for b in bytes {
+                        if let Self::Byte(byte) = b {
+                            f.write_fmt(format_args!("{byte}b,"))?;
+                        }
+                    }
+                    f.write_char(']')
+                } else {
+                    f.write_str("[B;...]")
+                }
+            }
+            Self::String(string) => f.write_fmt(format_args!("\"{string}\"")),
+            Self::List(_, payloads) => {
+                // Abbreviate if length is greater than 3, otherwise list
+                if payloads.len() <= 3 {
+                    f.write_char('[')?;
+                    for p in payloads {
+                        p.fmt(f)?;
+                        f.write_char(',')?;
+                    }
+                    f.write_char(']')
+                } else {
+                    f.write_str("[...]")
+                }
+            }
+            Self::Compound(_) => f.write_str("{...}"),
+            Self::IntArray(ints) => {
+                // Abbreviate if length is greater than 3, otherwise list
+                if ints.len() <= 3 {
+                    f.write_str("[I;")?;
+                    for i in ints {
+                        if let Self::Int(int) = i {
+                            f.write_fmt(format_args!("{int},"))?;
+                        }
+                    }
+                    f.write_char(']')
+                } else {
+                    f.write_str("[I;...]")
+                }
+            }
+            Self::LongArray(longs) => {
+                // Abbreviate if length is greater than 3, otherwise list
+                if longs.len() <= 3 {
+                    f.write_str("[L;")?;
+                    for l in longs {
+                        if let Self::Long(long) = l {
+                            f.write_fmt(format_args!("{long}b,"))?;
+                        }
+                    }
+                    f.write_char(']')
+                } else {
+                    f.write_str("[L;...]")
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct Tag {
-    name: String,
-    payload: TagPayload,
+    pub tag_id: TagID,
+    pub name: String,
+    pub payload: TagPayload,
 }
 
 impl Tag {
     /// Consumes and returns every tag up to and including TAG_End.
-    fn get_compound(nbt_bytes: &mut NbtBytes) -> ByteResult<Vec<Tag>> {
+    fn get_compound(nbt_bytes: &mut NbtBytes) -> ByteResult<Vec<Self>> {
         let mut tags = vec![];
 
         loop {
@@ -78,9 +175,10 @@ impl Tag {
                 String::new()
             };
 
-            tags.push(Tag {
+            tags.push(Self {
+                tag_id,
                 name,
-                payload: Tag::get_payload(nbt_bytes, tag_id)?,
+                payload: Self::get_payload(nbt_bytes, tag_id)?,
             });
 
             if tag_id == TagID::End {
@@ -91,7 +189,7 @@ impl Tag {
         Ok(tags)
     }
 
-    /// Gets the payload from a tag type.
+    /// Gets the payload to go with a tag type.
     fn get_payload(nbt_bytes: &mut NbtBytes, tag_id: TagID) -> ByteResult<TagPayload> {
         Ok(match tag_id {
             TagID::End => TagPayload::End,
@@ -138,7 +236,7 @@ impl Tag {
         })
     }
 
-    pub fn new<'a>(bytes: &Vec<u8>) -> ByteResult<Tag> {
+    pub fn new(bytes: &Vec<u8>) -> ByteResult<Self> {
         let mut nbt_bytes = NbtBytes {
             bytes: &mut bytes.iter(),
         };
@@ -149,9 +247,10 @@ impl Tag {
             String::new()
         };
 
-        Ok(Tag {
+        Ok(Self {
+            tag_id,
             name,
-            payload: Tag::get_payload(&mut nbt_bytes, tag_id)?,
+            payload: Self::get_payload(&mut nbt_bytes, tag_id)?,
         })
     }
 }

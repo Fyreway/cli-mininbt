@@ -8,4 +8,5 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.0.18", features = ["derive"] }
 crossterm = "0.25.0"
+enum-as-inner = "0.5.1"
 flate2 = "1.0.24"
