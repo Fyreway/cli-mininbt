@@ -12,17 +12,17 @@ use crate::{
     util::Unwrap,
 };
 
-use self::{input::Status, window::Window};
+use self::{input::Status, win::Window};
 
 mod input;
 mod render;
-mod window;
+mod win;
 
 pub struct UI<'a> {
     stdout: Stdout,
     tag: &'a Tag,
     breadcrumbs_win: Window,
-    tag_win: Window,
+    tree_win: Window,
     bottom_win: Window,
     selected_tag: Vec<TagTraversal>,
     focused_tag: TagTraversal,
@@ -38,7 +38,7 @@ impl UI<'_> {
             stdout,
             tag,
             breadcrumbs_win: Window::new(0, 0, 0, 1).unwrap_or_err(),
-            tag_win: Window::new(0, 1, 0, size.1 - 2).unwrap_or_err(),
+            tree_win: Window::new(0, 1, size.0 / 2, size.1 - 2).unwrap_or_err(),
             bottom_win: Window::new(0, size.1 - 1, 0, 1).unwrap_or_err(),
             selected_tag: vec![],
             focused_tag: TagTraversal::None,

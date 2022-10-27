@@ -14,7 +14,6 @@ use super::UI;
 pub enum Status {
     Ok,
     Quit,
-    Goto,
 }
 
 impl UI<'_> {
@@ -90,7 +89,6 @@ impl UI<'_> {
         match event::read()? {
             Event::Key(key) => match key.code {
                 KeyCode::Char('q') => return Ok(Status::Quit),
-                KeyCode::Char('g') => return Ok(Status::Goto),
                 KeyCode::Enter => {
                     self.selected_tag.push(self.focused_tag.clone());
                     match TagTraversal::traverse(&self.selected_tag, self.tag).unwrap_or_err() {

@@ -20,7 +20,7 @@ impl UI<'_> {
         payloads: &[TagPayload],
     ) -> crossterm::Result<()> {
         for (i, item) in payloads.iter().enumerate() {
-            self.tag_win
+            self.tree_win
                 .mvwrite(
                     &mut self.stdout,
                     0,
@@ -59,7 +59,7 @@ impl UI<'_> {
         Ok(())
     }
     fn render_array(&mut self, tag: &Tag) -> crossterm::Result<()> {
-        self.tag_win.mvwrite(
+        self.tree_win.mvwrite(
             &mut self.stdout,
             0,
             0,
@@ -79,7 +79,7 @@ impl UI<'_> {
     }
 
     fn render_compound(&mut self, tag: &Tag) -> crossterm::Result<()> {
-        self.tag_win.mvwrite(
+        self.tree_win.mvwrite(
             &mut self.stdout,
             0,
             0,
@@ -93,7 +93,7 @@ impl UI<'_> {
             .filter(|t| t.tag_id != TagID::End)
             .enumerate()
         {
-            self.tag_win
+            self.tree_win
                 .mvwrite(
                     &mut self.stdout,
                     0,

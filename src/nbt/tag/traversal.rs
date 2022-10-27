@@ -1,4 +1,4 @@
-use std::fmt::{self, Write};
+use std::fmt;
 
 use enum_as_inner::EnumAsInner;
 
@@ -30,7 +30,7 @@ impl TagTraversal {
     pub fn traverse<'a>(
         path: &[TagTraversal],
         root: &'a Tag,
-    ) -> Result<TraversalResult<'a>, &'a str> {
+    ) -> Result<TraversalResult<'a>, &'static str> {
         // current selected tag
         let mut tag = root;
         // current selected payload
@@ -72,7 +72,7 @@ impl fmt::Display for TagTraversal {
         match self {
             Self::Compound(name) => f.write_fmt(format_args!("{name}")),
             Self::Array(idx) => f.write_fmt(format_args!("[{idx}]")),
-            Self::None => f.write_char('_'),
+            _ => unreachable!(),
         }
     }
 }

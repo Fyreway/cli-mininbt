@@ -15,10 +15,10 @@ pub struct Window {
 }
 
 impl Window {
-    pub fn new(y: u16, x: u16, w: u16, h: u16) -> Result<Self, String> {
+    pub fn new(y: u16, x: u16, w: u16, h: u16) -> Result<Self, &'static str> {
         let size = terminal::size().unwrap();
         if y + w > size.0 || x + h > size.1 {
-            Err(String::from("Invalid dimensions"))
+            Err("Invalid dimensions")
         } else {
             Ok(Self {
                 y,
