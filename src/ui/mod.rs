@@ -1,7 +1,4 @@
-use std::{
-    fmt::{self, Write},
-    io::{self, Stdout},
-};
+use std::io::{self, Stdout};
 
 use crossterm::{
     execute,
@@ -9,11 +6,9 @@ use crossterm::{
         self, disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
     },
 };
-// most amazing crate I've ever used
-use enum_as_inner::EnumAsInner;
 
 use crate::{
-    nbt::tag::{Tag, TagID},
+    nbt::tag::{traversal::TagTraversal, Tag},
     util::Unwrap,
 };
 
@@ -23,50 +18,7 @@ mod input;
 mod render;
 mod window;
 
-#[derive(Clone, EnumAsInner)]
-enum TagTraversal {
-    Compound(String),
-    Array(i32),
-    None,
-}
-
-impl fmt::Display for TagTraversal {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Compound(name) => f.write_fmt(format_args!("{name}")),
-            Self::Array(idx) => f.write_fmt(format_args!("[{idx}]")),
-            Self::None => f.write_char('_'),
-        }
-    }
-}
-
 /// Traverses a path indicated by a vector of TagTraversal.
-fn traverse<'a>(path: &'a Vec<TagTraversal>, root: &'a Tag) -> Result<&'a Tag, &str> {
-    let mut tag = root;
-    let mut payload = &tag.payload;
-    for traversal in path {
-        match traversal {
-            TagTraversal::Compound(name) => {
-                let subtags = payload.as_compound().unwrap();
-                tag = subtags
-                    .iter()
-                    .find(|t| &t.name == name)
-                    .ok_or("Invalid name")?;
-                payload = &tag.payload;
-            }
-            TagTraversal::Array(idx) => {
-                let (tag_id, payloads) = payload.as_list().unwrap();
-                payload = payloads.get(*idx as usize).ok_or("Invalid index")?;
-                if tag_id != &TagID::Compound || tag_id != &TagID::List {
-                    return Err("Cannot traverse into non-container tag");
-                }
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    Ok(tag)
-}
 
 pub struct UI<'a> {
     stdout: Stdout,

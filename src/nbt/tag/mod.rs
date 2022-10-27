@@ -6,6 +6,8 @@ use crate::nbt::bytes::NbtBytes;
 
 use super::bytes::ByteResult;
 
+pub mod traversal;
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TagID {
     End,
