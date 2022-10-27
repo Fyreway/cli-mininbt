@@ -8,6 +8,10 @@ use util::Unwrap;
 
 mod args;
 mod nbt;
+
+#[cfg(test)]
+mod test;
+
 mod ui;
 mod util;
 

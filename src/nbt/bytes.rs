@@ -1,6 +1,6 @@
 use std::{fmt, slice::Iter, string::FromUtf8Error};
 
-use crate::nbt::tag::TagID;
+use crate::nbt::tag::id::TagID;
 
 /// A wrapper around a u8 iterator that provides functions to read bytes and turn them into data.
 pub struct NbtBytes<'a> {
@@ -8,6 +8,7 @@ pub struct NbtBytes<'a> {
 }
 
 #[allow(clippy::enum_variant_names)]
+#[derive(Debug)]
 pub enum ByteError {
     NextByteError(usize),
     Utf8Error(FromUtf8Error),

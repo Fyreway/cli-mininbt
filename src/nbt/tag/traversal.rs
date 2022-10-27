@@ -4,6 +4,21 @@ use enum_as_inner::EnumAsInner;
 
 use super::{Tag, TagID};
 
+#[derive(EnumAsInner)]
+pub enum TraversalResult<'a> {
+    Tag(&'a Tag),
+    Contained(&'a Tag),
+}
+
+impl TraversalResult<'_> {
+    pub fn get_tag(&self) -> &Tag {
+        match self {
+            Self::Tag(tag) => tag,
+            Self::Contained(tag) => tag,
+        }
+    }
+}
+
 #[derive(Clone, EnumAsInner)]
 pub enum TagTraversal {
     Compound(String),
@@ -12,7 +27,10 @@ pub enum TagTraversal {
 }
 
 impl TagTraversal {
-    pub fn traverse<'a>(path: &'a Vec<TagTraversal>, root: &'a Tag) -> Result<&'a Tag, &str> {
+    pub fn traverse<'a>(
+        path: &[TagTraversal],
+        root: &'a Tag,
+    ) -> Result<TraversalResult<'a>, &'a str> {
         // current selected tag
         let mut tag = root;
         // current selected payload
@@ -24,7 +42,7 @@ impl TagTraversal {
                     tag = subtags
                         .iter()
                         .find(|t| &t.name == name)
-                        .ok_or("Invalid name")?;
+                        .ok_or("Invalid path")?;
                     payload = &tag.payload;
                 }
                 TagTraversal::Array(idx) => {
@@ -38,7 +56,14 @@ impl TagTraversal {
             }
         }
 
-        Ok(tag)
+        Ok(match tag.tag_id {
+            TagID::Compound
+            | TagID::ByteArray
+            | TagID::List
+            | TagID::IntArray
+            | TagID::LongArray => TraversalResult::Tag(tag),
+            _ => TraversalResult::Contained(tag),
+        })
     }
 }
 

@@ -18,8 +18,6 @@ mod input;
 mod render;
 mod window;
 
-/// Traverses a path indicated by a vector of TagTraversal.
-
 pub struct UI<'a> {
     stdout: Stdout,
     tag: &'a Tag,

@@ -1,7 +1,11 @@
 use crossterm::event::{self, Event, KeyCode};
 
 use crate::{
-    nbt::tag::{traversal::TagTraversal, TagID, TagPayload},
+    nbt::tag::{
+        id::TagID,
+        payload::TagPayload,
+        traversal::{TagTraversal, TraversalResult},
+    },
     util::Unwrap,
 };
 
@@ -10,13 +14,13 @@ use super::UI;
 pub enum Status {
     Ok,
     Quit,
+    Goto,
 }
 
 impl UI<'_> {
     fn move_focus(&mut self, forward: bool) {
-        let selected_payload = &TagTraversal::traverse(&self.selected_tag, self.tag)
-            .unwrap_or_err()
-            .payload;
+        let res = TagTraversal::traverse(&self.selected_tag, self.tag).unwrap_or_err();
+        let selected_payload = &res.get_tag().payload;
         match &self.focused_tag {
             TagTraversal::Compound(name) => {
                 let subtags = selected_payload.as_compound().unwrap();
@@ -86,9 +90,15 @@ impl UI<'_> {
         match event::read()? {
             Event::Key(key) => match key.code {
                 KeyCode::Char('q') => return Ok(Status::Quit),
+                KeyCode::Char('g') => return Ok(Status::Goto),
                 KeyCode::Enter => {
                     self.selected_tag.push(self.focused_tag.clone());
-                    self.focused_tag = TagTraversal::None;
+                    match TagTraversal::traverse(&self.selected_tag, self.tag).unwrap_or_err() {
+                        TraversalResult::Tag(_) => self.focused_tag = TagTraversal::None,
+                        TraversalResult::Contained(_) => {
+                            self.selected_tag.pop();
+                        }
+                    }
                 }
                 KeyCode::Esc => {
                     if let Some(tag) = self.selected_tag.pop() {

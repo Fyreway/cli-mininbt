@@ -5,13 +5,13 @@ fn error<E: Display>(err: E) -> ! {
     exit(1);
 }
 
-pub trait Unwrap<T, E: Display> {
+pub trait Unwrap<E: Display> {
     type Type;
 
     fn unwrap_or_err(self) -> Self::Type;
 }
 
-impl<T, E: Display> Unwrap<T, E> for Result<T, E> {
+impl<T, E: Display> Unwrap<E> for Result<T, E> {
     type Type = T;
 
     fn unwrap_or_err(self) -> Self::Type {

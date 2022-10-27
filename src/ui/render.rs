@@ -7,7 +7,7 @@ use crossterm::{
 };
 
 use crate::{
-    nbt::tag::{traversal::TagTraversal, Tag, TagID, TagPayload},
+    nbt::tag::{id::TagID, payload::TagPayload, traversal::TagTraversal, Tag},
     util::Unwrap,
 };
 
@@ -135,7 +135,8 @@ impl UI<'_> {
     pub fn render(&mut self) -> crossterm::Result<()> {
         queue!(self.stdout, Clear(ClearType::All))?;
         let selected_tag = self.selected_tag.clone();
-        let tag = TagTraversal::traverse(&selected_tag, self.tag).unwrap_or_err();
+        let res = TagTraversal::traverse(&selected_tag, self.tag).unwrap_or_err();
+        let tag = res.get_tag();
         match tag.tag_id {
             TagID::Compound => self.render_compound(tag)?,
             TagID::ByteArray | TagID::List | TagID::IntArray | TagID::LongArray => {
