@@ -87,7 +87,7 @@ impl fmt::Display for TagPayload {
                     f.write_str("[L;...]")
                 }
             }
-            _ => unreachable!(),
+            Self::End => unreachable!(),
         }
     }
 }

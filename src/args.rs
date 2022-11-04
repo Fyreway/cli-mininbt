@@ -7,3 +7,7 @@ use clap::Parser;
 pub struct Args {
     pub file: PathBuf,
 }
+
+pub fn parse() -> Args {
+    Args::parse()
+}

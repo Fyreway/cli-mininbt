@@ -1,4 +1,4 @@
-use crate::nbt::bytes::NbtBytes;
+use crate::nbt::bytes::NbtBytesIter;
 
 use self::{id::TagID, payload::TagPayload};
 
@@ -16,16 +16,16 @@ pub struct Tag {
 }
 
 impl Tag {
-    /// Consumes and returns every tag up to and including TAG_End.
-    fn get_compound(nbt_bytes: &mut NbtBytes) -> ByteResult<Vec<Self>> {
+    /// Consumes and returns every tag up to and including `TAG_End`.
+    fn get_compound(nbt_bytes: &mut NbtBytesIter) -> ByteResult<Vec<Self>> {
         let mut tags = vec![];
 
         loop {
             let tag_id = nbt_bytes.next_id()?;
-            let name = if tag_id != TagID::End {
-                nbt_bytes.next_str()?
-            } else {
+            let name = if tag_id == TagID::End {
                 String::new()
+            } else {
+                nbt_bytes.next_str()?
             };
 
             tags.push(Self {
@@ -43,7 +43,7 @@ impl Tag {
     }
 
     /// Gets the payload to go with a tag type.
-    fn get_payload(nbt_bytes: &mut NbtBytes, tag_id: TagID) -> ByteResult<TagPayload> {
+    fn get_payload(nbt_bytes: &mut NbtBytesIter, tag_id: TagID) -> ByteResult<TagPayload> {
         Ok(match tag_id {
             TagID::End => TagPayload::End,
             TagID::Byte => TagPayload::Byte(nbt_bytes.next_i8()?),
@@ -90,14 +90,14 @@ impl Tag {
     }
 
     pub fn new(bytes: &[u8]) -> ByteResult<Self> {
-        let mut nbt_bytes = NbtBytes {
-            bytes: &mut bytes.iter(),
+        let mut nbt_bytes = NbtBytesIter {
+            iter: &mut bytes.iter(),
         };
         let tag_id = nbt_bytes.next_id()?;
-        let name = if tag_id != TagID::End {
-            nbt_bytes.next_str()?
-        } else {
+        let name = if tag_id == TagID::End {
             String::new()
+        } else {
+            nbt_bytes.next_str()?
         };
 
         Ok(Self {

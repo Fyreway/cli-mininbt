@@ -6,17 +6,14 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 
-use crate::{
-    nbt::tag::{id::TagID, payload::TagPayload, traversal::TagTraversal, Tag},
-    util::Unwrap,
-};
+use crate::nbt::tag::{id::TagID, payload::TagPayload, traversal::TagTraversal, Tag};
 
 use super::UI;
 
 impl UI<'_> {
     fn render_array_type(
         &mut self,
-        tag_id: &TagID,
+        tag_id: TagID,
         payloads: &[TagPayload],
     ) -> crossterm::Result<()> {
         for (i, item) in payloads.iter().enumerate() {
@@ -52,7 +49,7 @@ impl UI<'_> {
                         }
                         TagID::String => formatted.cyan(),
                         TagID::Compound => formatted.dark_red(),
-                        _ => unreachable!(),
+                        TagID::End => unreachable!(),
                     }
                 })?;
         }
@@ -66,12 +63,12 @@ impl UI<'_> {
             format!("\"{}\"", tag.name).as_str().green(),
         )?;
         self.render_array_type(
-            &(&tag.payload).into(),
+            (&tag.payload).into(),
             match &tag.payload {
-                TagPayload::List(_, p) => p,
-                TagPayload::ByteArray(p) => p,
-                TagPayload::IntArray(p) => p,
-                TagPayload::LongArray(p) => p,
+                TagPayload::List(_, p)
+                | TagPayload::ByteArray(p)
+                | TagPayload::IntArray(p)
+                | TagPayload::LongArray(p) => p,
                 _ => unreachable!(),
             },
         )?;
@@ -125,7 +122,7 @@ impl UI<'_> {
                         }
                         TagID::String => formatted.cyan(),
                         TagID::Compound => formatted.dark_red(),
-                        _ => unreachable!(),
+                        TagID::End => unreachable!(),
                     }
                 })?;
         }
@@ -135,19 +132,19 @@ impl UI<'_> {
     pub fn render(&mut self) -> crossterm::Result<()> {
         queue!(self.stdout, Clear(ClearType::All))?;
         let selected_tag = self.selected_tag.clone();
-        let res = TagTraversal::traverse(&selected_tag, self.tag).unwrap_or_err();
+        let res = TagTraversal::traverse(&selected_tag, self.tag).unwrap();
         let tag = res.get_tag();
         match tag.tag_id {
             TagID::Compound => self.render_compound(tag)?,
             TagID::ByteArray | TagID::List | TagID::IntArray | TagID::LongArray => {
-                self.render_array(tag)?
+                self.render_array(tag)?;
             }
             _ => (),
         }
         self.breadcrumbs_win.mv(&mut self.stdout, 0, 0)?;
         for tr in &self.selected_tag {
             self.breadcrumbs_win
-                .write(&mut self.stdout, format!("{tr}").grey())?
+                .write(&mut self.stdout, tr.to_string().grey())?
                 .write(&mut self.stdout, " > ".dark_grey())?;
         }
         self.bottom_win

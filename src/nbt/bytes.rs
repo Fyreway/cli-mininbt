@@ -1,10 +1,10 @@
-use std::{fmt, slice::Iter, string::FromUtf8Error};
+use std::{slice::Iter, string::FromUtf8Error};
 
 use crate::nbt::tag::id::TagID;
 
 /// A wrapper around a u8 iterator that provides functions to read bytes and turn them into data.
-pub struct NbtBytes<'a> {
-    pub bytes: &'a mut Iter<'a, u8>,
+pub struct NbtBytesIter<'a> {
+    pub iter: &'a mut Iter<'a, u8>,
 }
 
 #[allow(clippy::enum_variant_names)]
@@ -15,26 +15,26 @@ pub enum ByteError {
     InvalidTagID(u8),
 }
 
-impl fmt::Display for ByteError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl ToString for ByteError {
+    fn to_string(&self) -> String {
         match self {
-            Self::NextByteError(n) => f.write_fmt(format_args!("Cannot read {n} bytes ahead")),
-            Self::Utf8Error(e) => f.write_fmt(format_args!("UTF8 Error: {e}")),
-            Self::InvalidTagID(id) => f.write_fmt(format_args!("Invalid tag ID byte {id:x?}")),
+            Self::NextByteError(n) => format!("Cannot read {n} bytes ahead"),
+            Self::Utf8Error(e) => format!("UTF8 Error: {e}"),
+            Self::InvalidTagID(id) => format!("Invalid tag ID byte {id:x?}"),
         }
     }
 }
 
 pub type ByteResult<T> = Result<T, ByteError>;
 
-impl NbtBytes<'_> {
+impl NbtBytesIter<'_> {
     /// Reads and consumes a specified number of bytes from the iterator. This
-    /// function returns a vector of u8 on success, or a ByteError::NextByteError
+    /// function returns a vector of u8 on success, or a `ByteError::NextByteError`
     /// on failure (if the iterator reaches its end before all bytes were read).
     pub fn next_bytes(&mut self, n: usize) -> ByteResult<Vec<u8>> {
         let mut vec = vec![];
         for _ in 0..n {
-            vec.push(*self.bytes.next().ok_or(ByteError::NextByteError(n))?);
+            vec.push(*self.iter.next().ok_or(ByteError::NextByteError(n))?);
         }
 
         Ok(vec)
@@ -43,7 +43,7 @@ impl NbtBytes<'_> {
     /// Takes the next byte and constructs an i8.
     pub fn next_i8(&mut self) -> ByteResult<i8> {
         Ok(i8::from_be_bytes([*self
-            .bytes
+            .iter
             .next()
             .ok_or(ByteError::NextByteError(1))?]))
     }
@@ -90,11 +90,11 @@ impl NbtBytes<'_> {
         }
     }
 
-    /// Gets the next bytes and transforms it into a TagID. Since there are more
-    /// possible u8 values than TagID values, this returns the TagID on success
-    /// and a ByteError::InvalidTagID on failure.
+    /// Gets the next bytes and transforms it into a `TagID`. Since there are more
+    /// possible u8 values than `TagID` values, this returns the `TagID` on success
+    /// and a `ByteError::InvalidTagID` on failure.
     pub fn next_id(&mut self) -> ByteResult<TagID> {
-        (*self.bytes.next().ok_or(ByteError::NextByteError(1))?)
+        (*self.iter.next().ok_or(ByteError::NextByteError(1))?)
             .try_into()
             .map_err(ByteError::InvalidTagID)
     }

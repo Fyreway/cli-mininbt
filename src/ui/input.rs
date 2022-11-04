@@ -1,12 +1,9 @@
 use crossterm::event::{self, Event, KeyCode};
 
-use crate::{
-    nbt::tag::{
-        id::TagID,
-        payload::TagPayload,
-        traversal::{TagTraversal, TraversalResult},
-    },
-    util::Unwrap,
+use crate::nbt::tag::{
+    id::TagID,
+    payload::TagPayload,
+    traversal::{TagTraversal, TraversedTag},
 };
 
 use super::UI;
@@ -18,7 +15,7 @@ pub enum Status {
 
 impl UI<'_> {
     fn move_focus(&mut self, forward: bool) {
-        let res = TagTraversal::traverse(&self.selected_tag, self.tag).unwrap_or_err();
+        let res = TagTraversal::traverse(&self.selected_tag, self.tag).unwrap();
         let selected_payload = &res.get_tag().payload;
         match &self.focused_tag {
             TagTraversal::Compound(name) => {
@@ -43,7 +40,7 @@ impl UI<'_> {
                     }]
                     .name
                     .clone(),
-                )
+                );
             }
             TagTraversal::Array(idx) => {
                 let payloads = selected_payload.as_list().unwrap().1;
@@ -57,7 +54,7 @@ impl UI<'_> {
                     payloads.len() as i32 - 1
                 } else {
                     *idx - 1
-                })
+                });
             }
             TagTraversal::None => match selected_payload {
                 TagPayload::Compound(subtags) => {
@@ -67,7 +64,7 @@ impl UI<'_> {
                             subtags[if forward { 0 } else { subtags.len() - 2 }]
                                 .name
                                 .clone(),
-                        )
+                        );
                     }
                 }
                 TagPayload::List(_, payloads) => {
@@ -91,9 +88,9 @@ impl UI<'_> {
                 KeyCode::Char('q') => return Ok(Status::Quit),
                 KeyCode::Enter => {
                     self.selected_tag.push(self.focused_tag.clone());
-                    match TagTraversal::traverse(&self.selected_tag, self.tag).unwrap_or_err() {
-                        TraversalResult::Tag(_) => self.focused_tag = TagTraversal::None,
-                        TraversalResult::Contained(_) => {
+                    match TagTraversal::traverse(&self.selected_tag, self.tag).unwrap() {
+                        TraversedTag::Tag(_) => self.focused_tag = TagTraversal::None,
+                        TraversedTag::Contained(_) => {
                             self.selected_tag.pop();
                         }
                     }
