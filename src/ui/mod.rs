@@ -1,7 +1,7 @@
 use std::io::{self, Stdout};
 
 use crossterm::{
-    execute,
+    cursor, execute,
     terminal::{
         self, disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
     },
@@ -33,7 +33,7 @@ impl UI<'_> {
         let size = terminal::size()?;
         let mut stdout = io::stdout();
         enable_raw_mode()?;
-        execute!(stdout, EnterAlternateScreen)?;
+        execute!(stdout, EnterAlternateScreen, cursor::Hide)?;
         Ok(UI {
             stdout,
             tag,
@@ -50,7 +50,7 @@ impl UI<'_> {
 
     fn deinit(&mut self) -> crossterm::Result<()> {
         disable_raw_mode()?;
-        execute!(self.stdout, LeaveAlternateScreen)
+        execute!(self.stdout, LeaveAlternateScreen, cursor::Show)
     }
 
     pub fn mainloop(&mut self) -> crossterm::Result<()> {

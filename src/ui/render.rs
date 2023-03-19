@@ -38,7 +38,7 @@ impl UI<'_> {
                 })?
                 .write(&mut self.stdout, ": ".grey())?
                 .write(&mut self.stdout, {
-                    let formatted = format!("{}", item);
+                    let formatted = format!("{item}");
                     match tag_id {
                         TagID::Byte | TagID::Short | TagID::Int | TagID::Long => {
                             formatted.magenta()

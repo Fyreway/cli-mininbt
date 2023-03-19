@@ -87,11 +87,13 @@ impl UI<'_> {
             Event::Key(key) => match key.code {
                 KeyCode::Char('q') => return Ok(Status::Quit),
                 KeyCode::Enter => {
-                    self.selected_tag.push(self.focused_tag.clone());
-                    match TagTraversal::traverse(&self.selected_tag, self.tag).unwrap() {
-                        TraversedTag::Tag(_) => self.focused_tag = TagTraversal::None,
-                        TraversedTag::Contained(_) => {
-                            self.selected_tag.pop();
+                    if !self.focused_tag.is_none() {
+                        self.selected_tag.push(self.focused_tag.clone());
+                        match TagTraversal::traverse(&self.selected_tag, self.tag).unwrap() {
+                            TraversedTag::Tag(_) => self.focused_tag = TagTraversal::None,
+                            TraversedTag::Contained(_) => {
+                                self.selected_tag.pop();
+                            }
                         }
                     }
                 }
