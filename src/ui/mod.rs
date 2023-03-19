@@ -31,11 +31,8 @@ pub struct UI<'a> {
 impl UI<'_> {
     pub fn new(tag: &Tag) -> crossterm::Result<UI> {
         let size = terminal::size()?;
-        let mut stdout = io::stdout();
-        enable_raw_mode()?;
-        execute!(stdout, EnterAlternateScreen, cursor::Hide)?;
         Ok(UI {
-            stdout,
+            stdout: io::stdout(),
             tag,
             breadcrumbs_win: Window::new(0, 0, 0, 1)
                 .unwrap_or_err("Could not create breadcrumbs window"),
@@ -48,12 +45,12 @@ impl UI<'_> {
         })
     }
 
-    fn deinit(&mut self) -> crossterm::Result<()> {
-        disable_raw_mode()?;
-        execute!(self.stdout, LeaveAlternateScreen, cursor::Show)
-    }
-
     pub fn mainloop(&mut self) -> crossterm::Result<()> {
+        enable_raw_mode()?;
+        execute!(self.stdout, EnterAlternateScreen, cursor::Hide)?;
+
+        self.move_focus(true);
+
         'main: loop {
             self.render()?;
 
@@ -63,6 +60,8 @@ impl UI<'_> {
                 Status::Ok => (),
             }
         }
-        self.deinit()
+
+        disable_raw_mode()?;
+        execute!(self.stdout, LeaveAlternateScreen, cursor::Show)
     }
 }
