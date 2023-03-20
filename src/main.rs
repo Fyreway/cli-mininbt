@@ -20,6 +20,8 @@ mod util;
 use flate2::read::GzDecoder;
 use nbt::tag::Tag;
 
+use crate::nbt::encode::encode_tag;
+
 fn main() {
     let args = args::parse();
     let bytes = fs::read(&args.file).unwrap_or_err("Could not open file");
