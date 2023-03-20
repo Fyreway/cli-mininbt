@@ -2,18 +2,28 @@ use enum_as_inner::EnumAsInner;
 
 use std::string::ToString;
 
-use super::{Tag, TagID};
+use super::{id::TagID, payload::TagPayload, Tag};
 
 #[derive(EnumAsInner)]
 pub enum TraversedTag<'a> {
     Tag(&'a Tag),
-    Contained(&'a Tag),
+    Payload(&'a TagPayload),
+    ContainedTag(&'a Tag),
+    ContainedPayload(&'a TagPayload),
 }
 
 impl TraversedTag<'_> {
-    pub fn get_tag(&self) -> &Tag {
+    pub fn get_tag(&self) -> Option<&Tag> {
         match self {
-            Self::Contained(tag) | Self::Tag(tag) => tag,
+            Self::ContainedTag(t) | Self::Tag(t) => Some(t),
+            _ => None,
+        }
+    }
+
+    pub fn get_payload(&self) -> &TagPayload {
+        match self {
+            Self::Payload(p) | Self::ContainedPayload(p) => p,
+            _ => &self.get_tag().unwrap().payload,
         }
     }
 }
@@ -22,7 +32,6 @@ impl TraversedTag<'_> {
 pub enum Error {
     Path(Vec<TagTraversal>),
     Index(i32),
-    Container,
 }
 
 impl ToString for Error {
@@ -33,7 +42,6 @@ impl ToString for Error {
                 "Invalid path: ".to_string() + &str_path.join(" > ")
             }
             Self::Index(idx) => format!("Invalid index: {idx}"),
-            Self::Container => "Cannot traverse into a non-container tag".to_string(),
         }
     }
 }
@@ -61,37 +69,46 @@ impl TagTraversal {
         root: &'a Tag,
     ) -> Result<TraversedTag<'a>, Error> {
         // current selected tag
-        let mut tag = root;
+        let mut tag = Some(root);
         // current selected payload
-        let mut payload = &tag.payload;
+        let mut payload = &tag.unwrap().payload;
         for traversal in path {
             match traversal {
                 TagTraversal::Compound(name) => {
+                    // Access name in compound
                     let subtags = payload.as_compound().unwrap();
-                    tag = subtags
-                        .iter()
-                        .find(|t| &t.name == name)
-                        .ok_or_else(|| Error::Path(path.to_vec()))?;
-                    payload = &tag.payload;
+                    tag = Some(
+                        subtags
+                            .iter()
+                            .find(|t| &t.name == name)
+                            .ok_or(Error::Path(path.to_vec()))?,
+                    );
+                    payload = &tag.unwrap().payload;
                 }
-                TagTraversal::Array(idx) => {
-                    let (tag_id, payloads) = payload.as_list().unwrap();
-                    payload = payloads.get(*idx as usize).ok_or(Error::Index(*idx))?;
-                    if tag_id != &TagID::Compound || tag_id != &TagID::List {
-                        return Err(Error::Container);
-                    }
+                &TagTraversal::Array(idx) => {
+                    // Access idx in array
+                    let (
+                        TagPayload::IntArray(payloads)
+                        | TagPayload::ByteArray(payloads)
+                        | TagPayload::LongArray(payloads)
+                        | TagPayload::List(_, payloads)) = payload else {panic!("{payload:?}")};
+                    payload = payloads.get(idx as usize).ok_or(Error::Index(idx))?;
+                    tag = None;
                 }
                 TagTraversal::None => unreachable!(),
             }
         }
 
-        Ok(match tag.tag_id {
-            TagID::Compound
-            | TagID::ByteArray
-            | TagID::List
-            | TagID::IntArray
-            | TagID::LongArray => TraversedTag::Tag(tag),
-            _ => TraversedTag::Contained(tag),
+        Ok(if let Some(t) = tag {
+            if t.is_container() {
+                TraversedTag::Tag(t)
+            } else {
+                TraversedTag::ContainedTag(t)
+            }
+        } else if Into::<TagID>::into(payload).is_container() {
+            TraversedTag::Payload(payload)
+        } else {
+            TraversedTag::ContainedPayload(payload)
         })
     }
 }

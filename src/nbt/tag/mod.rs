@@ -106,4 +106,8 @@ impl Tag {
             payload: Self::get_payload(&mut nbt_bytes, tag_id)?,
         })
     }
+
+    pub fn is_container(&self) -> bool {
+        self.tag_id.is_container()
+    }
 }

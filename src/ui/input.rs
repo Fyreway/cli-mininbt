@@ -16,7 +16,7 @@ pub enum Status {
 impl UI<'_> {
     pub fn move_focus(&mut self, forward: bool) {
         let res = TagTraversal::traverse(&self.selected_tag, self.tag).unwrap();
-        let selected_payload = &res.get_tag().payload;
+        let selected_payload = res.get_payload();
         match &self.focused_tag {
             TagTraversal::Compound(name) => {
                 let subtags = selected_payload.as_compound().unwrap();
@@ -89,12 +89,14 @@ impl UI<'_> {
                 KeyCode::Enter => {
                     self.selected_tag.push(self.focused_tag.clone());
                     match TagTraversal::traverse(&self.selected_tag, self.tag).unwrap() {
-                        TraversedTag::Tag(_) => self.focused_tag = TagTraversal::None,
-                        TraversedTag::Contained(_) => {
+                        TraversedTag::Tag(_) | TraversedTag::Payload(_) => {
+                            self.focused_tag = TagTraversal::None;
+                            self.move_focus(true);
+                        }
+                        TraversedTag::ContainedTag(_) | TraversedTag::ContainedPayload(_) => {
                             self.selected_tag.pop();
                         }
                     }
-                    self.move_focus(true);
                 }
                 KeyCode::Esc => {
                     if let Some(tag) = self.selected_tag.pop() {

@@ -60,3 +60,12 @@ impl From<&TagPayload> for TagID {
         }
     }
 }
+
+impl TagID {
+    pub fn is_container(self) -> bool {
+        matches!(
+            self,
+            Self::ByteArray | Self::IntArray | Self::List | Self::LongArray | Self::Compound
+        )
+    }
+}

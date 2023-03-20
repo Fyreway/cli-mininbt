@@ -6,7 +6,7 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 
-use crate::nbt::tag::{id::TagID, payload::TagPayload, traversal::TagTraversal, Tag};
+use crate::nbt::tag::{id::TagID, payload::TagPayload, traversal::TagTraversal};
 
 use super::UI;
 
@@ -18,19 +18,15 @@ impl UI<'_> {
     ) -> crossterm::Result<()> {
         for (i, item) in payloads.iter().enumerate() {
             self.tree_win
-                .mvwrite(
-                    &mut self.stdout,
-                    0,
-                    (i + 1).try_into().unwrap(),
-                    "- ".grey(),
-                )?
+                .mvwrite(&mut self.stdout, 0, i.try_into().unwrap(), "- ".grey())?
                 .write(&mut self.stdout, {
                     let formatted = format!("{i}").red();
-                    if if let TagTraversal::Array(idx) = self.focused_tag.clone() {
-                        idx == i.try_into().unwrap()
-                    } else {
-                        false
-                    } {
+                    if self
+                        .focused_tag
+                        .clone()
+                        .as_array()
+                        .map_or_else(|| false, |&idx| idx == i as i32)
+                    {
                         formatted.on_dark_blue()
                     } else {
                         formatted
@@ -55,16 +51,10 @@ impl UI<'_> {
         }
         Ok(())
     }
-    fn render_array(&mut self, tag: &Tag) -> crossterm::Result<()> {
-        self.tree_win.mvwrite(
-            &mut self.stdout,
-            0,
-            0,
-            format!("\"{}\"", tag.name).as_str().green(),
-        )?;
+    fn render_array(&mut self, payload: &TagPayload) -> crossterm::Result<()> {
         self.render_array_type(
-            (&tag.payload).into(),
-            match &tag.payload {
+            payload.into(),
+            match payload {
                 TagPayload::List(_, p)
                 | TagPayload::ByteArray(p)
                 | TagPayload::IntArray(p)
@@ -75,15 +65,8 @@ impl UI<'_> {
         Ok(())
     }
 
-    fn render_compound(&mut self, tag: &Tag) -> crossterm::Result<()> {
-        self.tree_win.mvwrite(
-            &mut self.stdout,
-            0,
-            0,
-            format!("\"{}\"", tag.name).as_str().green(),
-        )?;
-        for (i, subtag) in tag
-            .payload
+    fn render_compound(&mut self, payload: &TagPayload) -> crossterm::Result<()> {
+        for (i, subtag) in payload
             .as_compound()
             .unwrap()
             .iter()
@@ -91,12 +74,7 @@ impl UI<'_> {
             .enumerate()
         {
             self.tree_win
-                .mvwrite(
-                    &mut self.stdout,
-                    0,
-                    (i + 1).try_into().unwrap(),
-                    "- ".grey(),
-                )?
+                .mvwrite(&mut self.stdout, 0, i.try_into().unwrap(), "- ".grey())?
                 .write(&mut self.stdout, {
                     let formatted = format!("\"{}\"", subtag.name).red();
                     if if let Some(name) = self.focused_tag.as_compound() {
@@ -133,18 +111,22 @@ impl UI<'_> {
         queue!(self.stdout, Clear(ClearType::All))?;
         let selected_tag = self.selected_tag.clone();
         let res = TagTraversal::traverse(&selected_tag, self.tag).unwrap();
-        let tag = res.get_tag();
-        match tag.tag_id {
-            TagID::Compound => self.render_compound(tag)?,
-            TagID::ByteArray | TagID::List | TagID::IntArray | TagID::LongArray => {
-                self.render_array(tag)?;
-            }
-            _ => (),
+        let payload = res.get_payload();
+        match Into::<TagID>::into(payload) {
+            TagID::Compound => self.render_compound(payload)?,
+            _ => self.render_array(payload)?,
         }
         self.breadcrumbs_win.mv(&mut self.stdout, 0, 0)?;
         for tr in &self.selected_tag {
             self.breadcrumbs_win
-                .write(&mut self.stdout, tr.to_string().grey())?
+                .write(&mut self.stdout, {
+                    let s = tr.to_string();
+                    if tr.as_array().is_some() {
+                        s.dark_green()
+                    } else {
+                        s.dark_red()
+                    }
+                })?
                 .write(&mut self.stdout, " > ".dark_grey())?;
         }
         self.bottom_win

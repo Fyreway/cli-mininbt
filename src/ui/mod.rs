@@ -24,7 +24,11 @@ pub struct UI<'a> {
     breadcrumbs_win: Window,
     tree_win: Window,
     bottom_win: Window,
+
+    // path to current tag (EXCLUDING name in container)
     selected_tag: Vec<TagTraversal>,
+
+    // name in current container
     focused_tag: TagTraversal,
 }
 
@@ -62,6 +66,7 @@ impl UI<'_> {
         }
 
         disable_raw_mode()?;
-        execute!(self.stdout, LeaveAlternateScreen, cursor::Show)
+        execute!(self.stdout, LeaveAlternateScreen, cursor::Show)?;
+        Ok(())
     }
 }
