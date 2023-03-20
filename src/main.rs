@@ -6,12 +6,14 @@
     clippy::module_name_repetitions
 )]
 
-use std::{fs, io::Read};
+use std::{fs, io::Read, path::PathBuf};
+use translate::{get_ext, translate};
 use ui::UI;
 use util::UnwrapOrStrErr;
 
 mod args;
 mod nbt;
+mod translate;
 mod ui;
 mod util;
 
@@ -27,6 +29,20 @@ fn main() {
         .unwrap_or_err("Could not unzip file");
 
     let nbt = Tag::new(&contents).unwrap_or_err("Could not parse tag");
-    let mut ui = UI::new(&nbt).unwrap_or_err("Could not create UI");
-    ui.mainloop().unwrap_or_err("Could not execute mainloop");
+
+    if let Some(fmt) = args.format {
+        let out = translate(&nbt, &fmt);
+        fs::write(
+            args.output.unwrap_or({
+                let mut p = PathBuf::from(args.file.file_stem().unwrap());
+                p.set_extension(get_ext(&fmt));
+                p
+            }),
+            out,
+        )
+        .unwrap_or_err("Could not write to file");
+    } else {
+        let mut ui = UI::new(&nbt).unwrap_or_err("Could not create UI");
+        ui.mainloop().unwrap_or_err("Could not execute mainloop");
+    }
 }
