@@ -101,10 +101,12 @@ impl UI<'_> {
                 KeyCode::Esc => {
                     if let Some(tag) = self.selected_tag.pop() {
                         self.focused_tag = tag;
+                    } else {
+                        return Ok(Status::Quit);
                     }
                 }
-                KeyCode::Tab => self.move_focus(true),
-                KeyCode::BackTab => self.move_focus(false),
+                KeyCode::Tab | KeyCode::Down => self.move_focus(true),
+                KeyCode::BackTab | KeyCode::Up => self.move_focus(false),
                 _ => (),
             },
             _ => (),

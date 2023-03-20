@@ -44,6 +44,10 @@ impl Window {
         }
     }
 
+    pub fn home(&mut self, stdout: &mut Stdout) -> crossterm::Result<&mut Self> {
+        queue!(stdout, MoveTo(self.y, self.x)).map(|_| self)
+    }
+
     pub fn mv(&mut self, stdout: &mut Stdout, y: u16, x: u16) -> crossterm::Result<&mut Self> {
         queue!(stdout, MoveTo(y + self.y, x + self.x)).map(|_| self)
     }

@@ -107,6 +107,16 @@ impl UI<'_> {
         Ok(())
     }
 
+    fn render_statusbar(&mut self) -> crossterm::Result<()> {
+        self.bottom_win.home(&mut self.stdout)?.write(
+            &mut self.stdout,
+            format!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))
+                .bold()
+                .blue(),
+        )?;
+        Ok(())
+    }
+
     pub fn render(&mut self) -> crossterm::Result<()> {
         queue!(self.stdout, Clear(ClearType::All))?;
         let selected_tag = self.selected_tag.clone();
@@ -129,8 +139,7 @@ impl UI<'_> {
                 })?
                 .write(&mut self.stdout, " > ".dark_grey())?;
         }
-        self.bottom_win
-            .mvwrite(&mut self.stdout, 0, 0, "[q]uit".stylize())?;
+        self.render_statusbar()?;
         self.stdout.flush()?;
         Ok(())
     }
