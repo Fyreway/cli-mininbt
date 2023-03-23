@@ -8,9 +8,9 @@ pub mod id;
 pub mod payload;
 pub mod traversal;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Tag {
-    pub tag_id: TagID,
+    pub id: TagID,
     pub name: String,
     pub payload: TagPayload,
 }
@@ -29,7 +29,7 @@ impl Tag {
             };
 
             tags.push(Self {
-                tag_id,
+                id: tag_id,
                 name,
                 payload: Self::get_payload(nbt_bytes, tag_id)?,
             });
@@ -101,13 +101,13 @@ impl Tag {
         };
 
         Ok(Self {
-            tag_id,
+            id: tag_id,
             name,
             payload: Self::get_payload(&mut nbt_bytes, tag_id)?,
         })
     }
 
     pub fn is_container(&self) -> bool {
-        self.tag_id.is_container()
+        self.id.is_container()
     }
 }

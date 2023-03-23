@@ -6,7 +6,7 @@
     clippy::module_name_repetitions
 )]
 
-use std::{fs, io::Read, path::PathBuf};
+use std::{fs, io::Write, path::PathBuf};
 use translate::{get_ext, translate};
 use ui::UI;
 use util::UnwrapOrStrErr;
@@ -17,20 +17,18 @@ mod translate;
 mod ui;
 mod util;
 
-use flate2::read::GzDecoder;
+use flate2::write::GzDecoder;
 use nbt::tag::Tag;
-
-use crate::nbt::encode::encode_tag;
 
 fn main() {
     let args = args::parse();
     let bytes = fs::read(&args.file).unwrap_or_err("Could not open file");
-    let mut gz = GzDecoder::new(bytes.as_slice());
-    let mut contents = vec![];
-    gz.read_to_end(&mut contents)
-        .unwrap_or_err("Could not unzip file");
+    let mut gz = GzDecoder::new(vec![]);
+    gz.write_all(&bytes)
+        .unwrap_or_err("Could not read from bytes");
 
-    let nbt = Tag::new(&contents).unwrap_or_err("Could not parse tag");
+    let mut nbt = Tag::new(&gz.finish().unwrap_or_err("Could not unzip file"))
+        .unwrap_or_err("Could not parse tag");
 
     if let Some(fmt) = args.format {
         let out = translate(&nbt, &fmt);
@@ -44,7 +42,7 @@ fn main() {
         )
         .unwrap_or_err("Could not write to file");
     } else {
-        let mut ui = UI::new(&nbt).unwrap_or_err("Could not create UI");
+        let mut ui = UI::new(args.file, &mut nbt).unwrap_or_err("Could not create UI");
         ui.mainloop().unwrap_or_err("Could not execute mainloop");
     }
 }

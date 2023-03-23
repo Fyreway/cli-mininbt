@@ -37,14 +37,16 @@ fn encode_payload(payload: &TagPayload) -> Vec<u8> {
     bytes
 }
 
-pub fn encode_tag(tag: &Tag) -> Vec<u8> {
+pub fn encode_tag(input: &Tag) -> Vec<u8> {
+    let mut tag = input.clone();
     let mut bytes = vec![];
 
     // Tag ID
-    bytes.push(tag.tag_id as u8);
+    tag.id = (&tag.payload).into();
+    bytes.push(tag.id as u8);
 
     // Handle tag name
-    if tag.tag_id != TagID::End {
+    if tag.id != TagID::End {
         bytes.extend_from_slice(&(tag.name.len() as u16).to_be_bytes());
         bytes.extend_from_slice(tag.name.as_bytes());
     }

@@ -68,4 +68,79 @@ impl TagID {
             Self::ByteArray | Self::IntArray | Self::List | Self::LongArray | Self::Compound
         )
     }
+
+    fn is_decimal(self) -> bool {
+        matches!(self, Self::Float | Self::Double)
+    }
+
+    fn parse_num(self, input: &str) -> Option<TagPayload> {
+        if self.is_decimal() {
+            let num: f64 = input.parse().ok()?;
+            if let Self::Float = self {
+                Some(TagPayload::Float({
+                    let res = num as f32;
+                    if res.is_finite() {
+                        Some(res)
+                    } else {
+                        None
+                    }
+                }?))
+            } else {
+                Some(TagPayload::Double(num))
+            }
+        } else {
+            let num: i64 = input.parse().ok()?;
+            Some(match self {
+                TagID::Byte => TagPayload::Byte(num.try_into().ok()?),
+                TagID::Short => TagPayload::Short(num.try_into().ok()?),
+                TagID::Int => TagPayload::Int(num.try_into().ok()?),
+                TagID::Long => TagPayload::Long(num),
+                _ => unreachable!(),
+            })
+        }
+    }
+
+    fn parse_str(input: &str) -> Option<TagPayload> {
+        let mut s = String::new();
+        let mut escaped = false;
+        for (i, ch) in input.strip_prefix('"')?.chars().enumerate() {
+            if escaped {
+                s.push(match ch {
+                    'n' => Some('\n'),
+                    't' => Some('\t'),
+                    'r' => Some('\r'),
+                    '0' => Some('\0'),
+                    '\\' | '"' => Some(ch),
+                    _ => None,
+                }?);
+            } else {
+                match ch {
+                    '\\' => escaped = true,
+                    '"' => {
+                        return if i == input.len() - 1 {
+                            Some(TagPayload::String(s))
+                        } else {
+                            None
+                        }
+                    }
+                    _ => s.push(ch),
+                }
+            }
+        }
+
+        None
+    }
+
+    pub fn parse(self, input: &str) -> Option<TagPayload> {
+        match self {
+            TagID::Byte
+            | TagID::Short
+            | TagID::Int
+            | TagID::Long
+            | TagID::Float
+            | TagID::Double => self.parse_num(input),
+            TagID::String => Self::parse_str(input),
+            _ => None,
+        }
+    }
 }

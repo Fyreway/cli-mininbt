@@ -4,7 +4,7 @@ use enum_as_inner::EnumAsInner;
 
 use super::{Tag, TagID};
 
-#[derive(Debug, EnumAsInner, PartialEq)]
+#[derive(Clone, Debug, EnumAsInner, PartialEq)]
 pub enum TagPayload {
     End,
     Byte(i8),
